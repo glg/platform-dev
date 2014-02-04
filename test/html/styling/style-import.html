@@ -13,9 +13,11 @@ license that can be found in the LICENSE file.
   <script src="../../../../tools/test/chai/chai.js"></script>
 </head>
 <body>
-  <div id="target"></div>
+  <div id="target">
+    <span>I am Orange!</span>
+  </div>
   <style id="flatten">
-    @import "rules/top.css";
+    @import "rules/styles.css";
   </style>
   <script>
     var assert = chai.assert;
@@ -29,14 +31,18 @@ license that can be found in the LICENSE file.
       assert.equal(style.sheet.cssRules.length, 1);
       assert.instanceOf(style.sheet.cssRules[0], window.CSSImportRule);
       assertStyle(target, 'backgroundColor', 'rgb(0, 128, 0)');
+      assertStyle(target.firstElementChild, 'color', 'rgb(255, 165, 0)');
       assertStyle(target, 'height', '100px');
       assertStyle(target, 'width', '100px');
       // flatten the @import rules and test again
       Platform.loader.xhrStyles([style], function() {
-        assert.equal(style.sheet.cssRules.length, 2);
+        assert.equal(style.sheet.cssRules.length, 4);
         assert.instanceOf(style.sheet.cssRules[0], window.CSSStyleRule);
         assert.instanceOf(style.sheet.cssRules[1], window.CSSStyleRule);
+        assert.instanceOf(style.sheet.cssRules[2], window.CSSStyleRule);
+        assert.instanceOf(style.sheet.cssRules[3], window.CSSStyleRule);
         assertStyle(target, 'backgroundColor', 'rgb(0, 128, 0)');
+        assertStyle(target.firstElementChild, 'color', 'rgb(255, 165, 0)');
         assertStyle(target, 'height', '100px');
         assertStyle(target, 'width', '100px');
         done();
