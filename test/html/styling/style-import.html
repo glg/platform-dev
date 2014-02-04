@@ -24,24 +24,35 @@ license that can be found in the LICENSE file.
     }
     var target = document.querySelector('#target');
     var style = document.querySelector('#flatten');
-    style.addEventListener('load', function() {
-      assert.equal(style.sheet.rules.length, 1);
-      assert.instanceOf(style.sheet.rules[0], window.CSSImportRule);
-      assertStyle(target, 'background-color', 'rgb(0, 128, 0)');
+
+    function evaluateStyles() {
+      assert.equal(style.sheet.cssRules.length, 1);
+      assert.instanceOf(style.sheet.cssRules[0], window.CSSImportRule);
+      assertStyle(target, 'backgroundColor', 'rgb(0, 128, 0)');
       assertStyle(target, 'height', '100px');
       assertStyle(target, 'width', '100px');
       // flatten the @import rules and test again
       Platform.loader.xhrStyles([style], function() {
-        assert.equal(style.sheet.rules.length, 2);
-        assert.instanceOf(style.sheet.rules[0], window.CSSStyleRule);
-        assert.instanceOf(style.sheet.rules[1], window.CSSStyleRule);
-        assertStyle(target, 'background-color', 'rgb(0, 128, 0)');
+        assert.equal(style.sheet.cssRules.length, 2);
+        assert.instanceOf(style.sheet.cssRules[0], window.CSSStyleRule);
+        assert.instanceOf(style.sheet.cssRules[1], window.CSSStyleRule);
+        assertStyle(target, 'backgroundColor', 'rgb(0, 128, 0)');
         assertStyle(target, 'height', '100px');
         assertStyle(target, 'width', '100px');
         done();
       });
+    }
+
+    addEventListener('WebComponentsReady', function() {
+      if (style.sheet && style.sheet.cssRules) {
+        evaluateStyles();
+      } else {
+        style.addEventListener('load', function() {
+          evaluateStyles();
+        });
+        style.addEventListener('error', assert.fail);
+      }
     });
-    style.addEventListener('error', assert.fail);
   </script>
 </body>
 </html>
