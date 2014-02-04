@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<!--
+Copyright 2013 The Polymer Authors. All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Styling via @import</title>
+  <script src="../../../platform.js"></script>
+  <script src="../../../../tools/test/htmltest.js"></script>
+  <script src="../../../../tools/test/chai/chai.js"></script>
+</head>
+<body>
+  <div id="target"></div>
+  <style id="flatten">
+    @import "rules/top.css";
+  </style>
+  <script>
+    var assert = chai.assert;
+    function assertStyle(node, style, equals) {
+      assert.equal(getComputedStyle(node)[style], equals);
+    }
+    var target = document.querySelector('#target');
+    var style = document.querySelector('#flatten');
+    style.addEventListener('load', function() {
+      assert.equal(style.sheet.rules.length, 1);
+      assert.instanceOf(style.sheet.rules[0], window.CSSImportRule);
+      assertStyle(target, 'background-color', 'rgb(0, 128, 0)');
+      assertStyle(target, 'height', '100px');
+      assertStyle(target, 'width', '100px');
+      // flatten the @import rules and test again
+      Platform.loader.xhrStyles([style], function() {
+        assert.equal(style.sheet.rules.length, 2);
+        assert.instanceOf(style.sheet.rules[0], window.CSSStyleRule);
+        assert.instanceOf(style.sheet.rules[1], window.CSSStyleRule);
+        assertStyle(target, 'background-color', 'rgb(0, 128, 0)');
+        assertStyle(target, 'height', '100px');
+        assertStyle(target, 'width', '100px');
+        done();
+      });
+    });
+    style.addEventListener('error', assert.fail);
+  </script>
+</body>
+</html>

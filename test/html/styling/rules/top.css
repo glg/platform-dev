@@ -1,0 +1,5 @@
+@import url(subrules/sub.css);
+#target {
+  height: 100px;
+  width: 100px;
+}

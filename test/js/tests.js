@@ -32,6 +32,7 @@ htmlSuite('styling', function() {
   htmlTest('html/styling/combinators.html?shadow&register');
   htmlTest('html/styling/before-content.html');
   htmlTest('html/styling/before-content.html?shadow&register');
+  htmlTest('html/styling/style-import.html');
 });
 
 htmlSuite('Library Cooperation', function() {
