@@ -5,8 +5,6 @@
  */
 (function(scope) {
 
-var STYLE_SELECTOR = 'style';
-
 var urlResolver = scope.urlResolver;
 
 var loader = {
@@ -56,31 +54,82 @@ function createStyleElement(cssText, scope) {
   return style;
 }
 
-// TODO(sorvell): use a common loader shared with HTMLImports polyfill
-// currently, this just loads the first @import per style element 
-// and does not recurse into loaded elements; we'll address this with a 
-// generalized loader that's built out of the one in the HTMLImports polyfill.
-// polyfill the loading of a style element's @import via xhr
 function xhrLoadStyle(style, callback) {
-  HTMLImports.xhr.load(atImportUrlFromStyle(style), function (err, resource,
-      url) {
-    replaceAtImportWithCssText(this, url, resource);
-    this.textContent = urlResolver.resolveCssText(this.textContent, url);
-    callback && callback(this);
-  }, style);
+  var tc = style.textContent;
+  var root = style.ownerDocument.baseURI;
+  var done = function(_, content) {
+    style.textContent = content;
+    callback(style);
+  };
+  recursiveFlatten(tc, {url: root}, 0, done);
 }
 
-var atImportRe = /@import\s[(]?['"]?([^\s'";)]*)/;
-
-// get the first @import rule from a style
-function atImportUrlFromStyle(style) {
-  var matches = style.textContent.match(atImportRe);
-  return matches && matches[1];
+function xhr(url) {
+  var request = new XMLHttpRequest();
+  if (scope.flags.debug || scope.flags.bust) {
+    url += '?' + Math.random();
+  }
+  request.open('GET', url, true);
+  request.send();
+  return request;
 }
 
-function replaceAtImportWithCssText(style, url, cssText) {
-  var re = new RegExp('@import[^;]*' + url + '[^;]*;', 'i');
-  style.textContent = style.textContent.replace(re, cssText);
+function recursiveFlatten(tc, mc, idx, callback) {
+  tc = urlResolver.resolveCssText(tc, mc.url);
+  var imports = atImportUrls(tc, mc.url);
+  var inflight = imports.length;
+
+  // bail early
+  if (!inflight) {
+    return callback(idx, tc);
+  }
+
+  // replace indexed @import rule with text
+  var done = function(index, content) {
+    // inline the content from the @import
+    tc = tc.replace(imports[index].matched, content);
+    inflight--;
+    // if no more imports, return with flattened text
+    if (inflight === 0) {
+      callback(idx, tc);
+    }
+  };
+
+  for (var i = 0; i < inflight; i++) {
+    var m = imports[i];
+    m.index = i;
+
+    // xhr the @import
+    var req = xhr(m.url);
+
+    // flatten the import before returning
+    req.onload = function() {
+      var content = this.response || this.responseText;
+      recursiveFlatten(content, this.match, this.match.index, done);
+    }.bind(req);
+
+    // clean up the failed request cleanly
+    req.onerror = function() {
+      done(this.match.index, '');
+    }.bind(req);
+
+    // attach the match object to the request
+    req.match = m;
+  }
+}
+
+var atImportRe = /@import\s+(?:url)?["'\(]*([^'"\)]*)['"\)]*;/g;
+
+// get the @import rules from a style
+function atImportUrls(tc, root) {
+  var matches = [];
+  var rm;
+  while ((rm = atImportRe.exec(tc))) {
+    var u = new URL(rm[1], root);
+    var obj = {matched: rm[0], url: u.href};
+    matches.push(obj);
+  }
+  return matches;
 }
 
 // exports
